@@ -1,5 +1,8 @@
 const express = require("express");
 const mysql = require("mysql");
+const validator = require("./validations/addUsers");
+const { isEmptyObj } = require("./validations/isEmptyObject");
+const { nullToStr } = require("./validations/nullToEmptyString");
 let connection = mysql.createConnection({
   host: "localhost",
   user: "root",
@@ -18,16 +21,26 @@ app.use(express.json());
 
 app.post("/", function (req, res) {
   const data = req.body;
-  console.log(data);
-  const searchSql = `SELECT * FROM users name LIKE '%${data?.name}%'`;
+  const searchSql = `SELECT * FROM users WHERE name LIKE '%${nullToStr(
+    data?.name
+  )}%' AND sur_name LIKE '%${nullToStr(
+    data?.sur_name
+  )}%' AND phone LIKE '%${nullToStr(
+    data?.phone
+  )}%' AND email LIKE '%${nullToStr(data?.email)}%'`;
   connection.query(searchSql, (err, result) => {
-    console.log(err);
     res.send(result);
   });
 });
 
 app.post("/create", function (req, res) {
   const data = req.body;
+  const required = validator.validateAddUsersProperties(data);
+  if (!isEmptyObj(required)) {
+    res.statusCode = 422;
+    res.send(required);
+    return;
+  }
   connection.query(
     `INSERT INTO users (name, sur_name, phone, email) VALUES ('${data.name}','${data.sur_name}','${data.phone}','${data.email}')`,
     (err, result) => {
@@ -65,6 +78,8 @@ app.delete("/:id", function (req, res) {
   });
 });
 
-app.listen(3000, function () {
+app.listen(3100, function () {
   console.log("server started");
 });
+
+module.exports.app = app;
